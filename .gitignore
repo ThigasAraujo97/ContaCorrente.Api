@@ -1,0 +1,38 @@
+## .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+artifacts/
+
+## Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.DotSettings.user
+
+## Banco SQLite gerado em tempo de execucao (recriado pelas migrations no startup)
+*.db
+*.db-shm
+*.db-wal
+
+## Node / front-end
+node_modules/
+dist/
+tsconfig.tsbuildinfo
+
+## Variaveis de ambiente locais (.env.development e .env.example sao versionados)
+.env
+.env.local
+*.local
+
+## Sistema operacional
+.DS_Store
+Thumbs.db
+
+## Resultados de teste
+TestResults/
+coverage/
+*.trx
