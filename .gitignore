@@ -13,6 +13,9 @@ artifacts/
 .vscode/
 *.DotSettings.user
 
+## Configuracao local de ferramentas de IA
+.claude/
+
 ## Banco SQLite gerado em tempo de execucao (recriado pelas migrations no startup)
 *.db
 *.db-shm
