@@ -31,10 +31,14 @@ public class ContasEndpointsTests : IClassFixture<ApiEmMemoria>
     }
 
     private Task<HttpResponseMessage> MovimentarAsync(
-        Guid contaId, string tipo, decimal valor, string? descricao = null)
+        Guid contaId,
+        string tipo,
+        decimal valor,
+        string? descricao = null,
+        string? formaPagamento = null)
         => _cliente.PostAsJsonAsync(
             $"/api/contas/{contaId}/movimentacoes",
-            new { tipo, valor, descricao });
+            new { tipo, valor, descricao, formaPagamento });
 
     [Fact]
     public async Task PostConta_CriaComSaldoZero()
@@ -173,6 +177,81 @@ public class ContasEndpointsTests : IClassFixture<ApiEmMemoria>
 
         saldoJson.Should().MatchRegex(@"""atualizadoEm"":""[^""]+Z""");
         historicoJson.Should().MatchRegex(@"""ocorridaEm"":""[^""]+Z""");
+    }
+
+    [Fact]
+    public async Task PostMovimentacao_ComFormaPagamento_PersisteEDevolveNoExtrato()
+    {
+        var conta = await CriarContaAsync();
+
+        var resposta = await MovimentarAsync(conta.Id, "Credito", 900m, "Venda", "Pix");
+        resposta.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var movimentacao = (await resposta.Content
+            .ReadFromJsonAsync<MovimentacaoResponse>(ApiEmMemoria.Json))!;
+
+        movimentacao.FormaPagamento.Should().Be(FormaPagamento.Pix);
+    }
+
+    [Fact]
+    public async Task PostMovimentacao_SemFormaPagamento_ContinuaAceito()
+    {
+        var conta = await CriarContaAsync();
+
+        // O campo e opcional: clientes antigos que nao o enviam seguem funcionando.
+        var resposta = await MovimentarAsync(conta.Id, "Credito", 100m, "Sem forma");
+
+        resposta.StatusCode.Should().Be(HttpStatusCode.Created);
+        var movimentacao = (await resposta.Content
+            .ReadFromJsonAsync<MovimentacaoResponse>(ApiEmMemoria.Json))!;
+        movimentacao.FormaPagamento.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PostMovimentacao_FormaPagamentoInvalida_Retorna400()
+    {
+        var conta = await CriarContaAsync();
+
+        var resposta = await _cliente.PostAsJsonAsync(
+            $"/api/contas/{conta.Id}/movimentacoes",
+            new { tipo = "Credito", valor = 10m, formaPagamento = "Cheque" });
+
+        resposta.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetHistorico_FiltraPorFormaPagamentoViaQueryString()
+    {
+        var conta = await CriarContaAsync();
+        await MovimentarAsync(conta.Id, "Credito", 500m, "Boleto recebido", "Boleto");
+        await MovimentarAsync(conta.Id, "Credito", 300m, "Pix recebido", "Pix");
+        await MovimentarAsync(conta.Id, "Credito", 200m, "Sem forma");
+
+        var pix = await _cliente.GetFromJsonAsync<PaginaResponse<MovimentacaoResponse>>(
+            $"/api/contas/{conta.Id}/movimentacoes?formaPagamento=Pix", ApiEmMemoria.Json);
+
+        pix!.TotalDeItens.Should().Be(1);
+        pix.Itens.Single().Descricao.Should().Be("Pix recebido");
+    }
+
+    [Fact]
+    public async Task GetHistorico_CombinaTodosOsFiltrosDoObjetoDeConsulta()
+    {
+        var conta = await CriarContaAsync();
+        await MovimentarAsync(conta.Id, "Credito", 1000m, "Aporte", "TransferenciaBancaria");
+        await MovimentarAsync(conta.Id, "Debito", 100m, "Saida cartao", "CartaoCredito");
+        await MovimentarAsync(conta.Id, "Debito", 50m, "Saida pix", "Pix");
+
+        // Exercita o binding do ObterHistoricoRequest: varios parametros de uma vez.
+        var url = $"/api/contas/{conta.Id}/movimentacoes"
+            + "?pagina=1&tamanho=5&tipo=Debito&formaPagamento=CartaoCredito";
+
+        var pagina = await _cliente.GetFromJsonAsync<PaginaResponse<MovimentacaoResponse>>(
+            url, ApiEmMemoria.Json);
+
+        pagina!.Tamanho.Should().Be(5);
+        pagina.TotalDeItens.Should().Be(1);
+        pagina.Itens.Single().Descricao.Should().Be("Saida cartao");
     }
 
     [Fact]

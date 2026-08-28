@@ -17,7 +17,8 @@ public class Movimentacao
         TipoMovimentacao tipo,
         decimal valor,
         decimal saldoResultante,
-        string? descricao)
+        string? descricao,
+        FormaPagamento? formaPagamento)
     {
         Id = Guid.NewGuid();
         ContaId = contaId;
@@ -25,6 +26,7 @@ public class Movimentacao
         Valor = valor;
         SaldoResultante = saldoResultante;
         Descricao = string.IsNullOrWhiteSpace(descricao) ? null : descricao.Trim();
+        FormaPagamento = formaPagamento;
         OcorridaEm = DateTime.UtcNow;
     }
 
@@ -45,6 +47,13 @@ public class Movimentacao
 
     public string? Descricao { get; private set; }
 
+    /// <summary>
+    /// Meio de pagamento usado. Opcional: lançamentos anteriores à introdução do campo
+    /// não têm essa informação, e não faria sentido inventar um valor para eles num
+    /// extrato que é registro histórico.
+    /// </summary>
+    public FormaPagamento? FormaPagamento { get; private set; }
+
     public DateTime OcorridaEm { get; private set; }
 
     /// <summary>
@@ -57,6 +66,7 @@ public class Movimentacao
         TipoMovimentacao tipo,
         decimal valor,
         decimal saldoResultante,
-        string? descricao)
-        => new(contaId, tipo, valor, saldoResultante, descricao);
+        string? descricao,
+        FormaPagamento? formaPagamento)
+        => new(contaId, tipo, valor, saldoResultante, descricao, formaPagamento);
 }

@@ -188,3 +188,51 @@ ou publicar as camadas separadamente.
 
 **Por quê.** A versão 7 mudou para licença comercial. A 6.12.2 é Apache 2.0 e cobre tudo o
 que a suíte usa. Mesma lógica que levou a descartar o MediatR.
+
+---
+
+## 14. `FormaPagamento` separada de `TipoMovimentacao`
+
+**Decisão.** O meio de pagamento é um enum próprio — `Boleto`, `CartaoCredito`,
+`CartaoDebito`, `Pix`, `TransferenciaBancaria`, `Dinheiro` — e não reaproveita os nomes
+`Credito`/`Debito`.
+
+**Por quê.** O pedido original falava em "Boleto/Credito/Debito/PIX". Mas `TipoMovimentacao`
+já usa `Credito`/`Debito` no sentido contábil (entrada e saída de valor). Se a forma de
+pagamento usasse os mesmos nomes, uma consulta como
+`?tipo=Debito&formaPagamento=Debito` ficaria ilegível — dois `Debito` com significados
+diferentes na mesma linha. Os nomes longos custam alguns caracteres e eliminam a ambiguidade.
+
+São duas dimensões independentes: uma entrada pode vir por boleto ou por PIX, e uma saída
+também. Modelá-las como um único campo perderia essa combinação.
+
+**Nulo é significado, não ausência de cuidado.** O campo é opcional porque lançamentos
+anteriores à introdução da coluna simplesmente não têm essa informação. O extrato é registro
+histórico: preencher um valor padrão retroativo seria inventar dado. Por isso a migration é
+aditiva e a coluna, `nullable` — nenhum registro existente precisou ser tocado.
+
+**Onde a regra vive.** No `MovimentarCommandValidator`, com `IsInEnum().When(tem valor)`.
+Sem isso, um inteiro fora da faixa entraria no banco em silêncio — o enum do C# não valida
+o intervalo por conta própria.
+
+---
+
+## 15. Filtros do histórico num objeto de consulta
+
+**Decisão.** `ObterHistoricoRequest` agrupa `pagina`, `tamanho`, `de`, `ate`, `tipo` e
+`formaPagamento`. A action recebe `[FromQuery] ObterHistoricoRequest filtro` em vez de seis
+parâmetros anotados.
+
+**Por quê.** Com um `[FromQuery]` por parâmetro, a assinatura crescia a cada filtro novo e
+já ocupava sete linhas. Agrupando, a action tem três parâmetros e **adicionar um filtro
+passa a ser uma propriedade no objeto** — o controller não muda.
+
+Ganho secundário: o objeto documenta cada filtro com XML comment, e isso aparece no Swagger.
+
+**Detalhe de binding.** A classe usa propriedades `init` com valores padrão, não um record
+posicional. O model binder do ASP.NET Core precisa de um construtor sem parâmetros para
+preencher propriedades vindas da query string.
+
+**Filtro é responsabilidade do servidor.** O front dispara uma nova consulta a cada mudança
+de filtro, em vez de filtrar o array em memória. Filtrar no cliente só funcionaria sobre a
+página já carregada — com 10 itens por página, o resultado seria simplesmente errado.

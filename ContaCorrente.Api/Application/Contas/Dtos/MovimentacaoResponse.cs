@@ -9,6 +9,7 @@ public sealed record MovimentacaoResponse(
     decimal Valor,
     decimal SaldoResultante,
     string? Descricao,
+    FormaPagamento? FormaPagamento,
     DateTime OcorridaEm)
 {
     public static MovimentacaoResponse De(Movimentacao movimentacao)
@@ -19,5 +20,6 @@ public sealed record MovimentacaoResponse(
             movimentacao.Valor,
             movimentacao.SaldoResultante,
             movimentacao.Descricao,
+            movimentacao.FormaPagamento,
             movimentacao.OcorridaEm);
 }

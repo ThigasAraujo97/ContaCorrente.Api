@@ -66,25 +66,36 @@ public sealed class ContasController(IDispatcher dispatcher) : ControllerBase
         CancellationToken cancellationToken)
     {
         var movimentacao = await dispatcher.Send(
-            new MovimentarCommand(contaId, request.Tipo, request.Valor, request.Descricao),
+            new MovimentarCommand(
+                contaId,
+                request.Tipo,
+                request.Valor,
+                request.Descricao,
+                request.FormaPagamento),
             cancellationToken);
 
         return CreatedAtAction(nameof(ObterHistorico), new { contaId }, movimentacao);
     }
 
-    /// <summary>Consulta o histórico de movimentações, da mais recente para a mais antiga.</summary>
+    /// <summary>
+    /// Consulta o histórico de movimentações, da mais recente para a mais antiga.
+    /// Aceita filtros de período, tipo (entrada/saída) e forma de pagamento.
+    /// </summary>
     [HttpGet("{contaId:guid}/movimentacoes")]
     [ProducesResponseType<PaginaResponse<MovimentacaoResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PaginaResponse<MovimentacaoResponse>>> ObterHistorico(
         Guid contaId,
-        CancellationToken cancellationToken,
-        [FromQuery] int pagina = 1,
-        [FromQuery] int tamanho = 20,
-        [FromQuery] DateTime? de = null,
-        [FromQuery] DateTime? ate = null,
-        [FromQuery] TipoMovimentacao? tipo = null)
+        [FromQuery] ObterHistoricoRequest filtro,
+        CancellationToken cancellationToken)
         => Ok(await dispatcher.Ask(
-            new ObterHistoricoQuery(contaId, pagina, tamanho, de, ate, tipo),
+            new ObterHistoricoQuery(
+                contaId,
+                filtro.Pagina,
+                filtro.Tamanho,
+                filtro.De,
+                filtro.Ate,
+                filtro.Tipo,
+                filtro.FormaPagamento),
             cancellationToken));
 }

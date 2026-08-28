@@ -9,4 +9,5 @@ namespace ContaCorrente.Api.Api.Requests;
 public sealed record MovimentarRequest(
     TipoMovimentacao Tipo,
     decimal Valor,
-    string? Descricao);
+    string? Descricao,
+    FormaPagamento? FormaPagamento = null);

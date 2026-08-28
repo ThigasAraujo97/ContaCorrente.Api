@@ -13,4 +13,5 @@ public sealed record MovimentarCommand(
     Guid ContaId,
     TipoMovimentacao Tipo,
     decimal Valor,
-    string? Descricao) : ICommand<MovimentacaoResponse>;
+    string? Descricao,
+    FormaPagamento? FormaPagamento = null) : ICommand<MovimentacaoResponse>;

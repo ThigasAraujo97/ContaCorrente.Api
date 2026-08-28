@@ -68,12 +68,15 @@ public class Conta
     /// Registra uma entrada de valor.
     /// </summary>
     /// <exception cref="ValorInvalidoException">Se o valor não for maior que zero.</exception>
-    public Movimentacao Creditar(decimal valor, string? descricao = null)
+    public Movimentacao Creditar(
+        decimal valor,
+        string? descricao = null,
+        FormaPagamento? formaPagamento = null)
     {
         GarantirValorPositivo(valor);
 
         Saldo += valor;
-        return Registrar(TipoMovimentacao.Credito, valor, descricao);
+        return Registrar(TipoMovimentacao.Credito, valor, descricao, formaPagamento);
     }
 
     /// <summary>
@@ -81,7 +84,10 @@ public class Conta
     /// </summary>
     /// <exception cref="ValorInvalidoException">Se o valor não for maior que zero.</exception>
     /// <exception cref="SaldoInsuficienteException">Se o valor exceder o saldo disponível.</exception>
-    public Movimentacao Debitar(decimal valor, string? descricao = null)
+    public Movimentacao Debitar(
+        decimal valor,
+        string? descricao = null,
+        FormaPagamento? formaPagamento = null)
     {
         GarantirValorPositivo(valor);
 
@@ -92,12 +98,16 @@ public class Conta
         }
 
         Saldo -= valor;
-        return Registrar(TipoMovimentacao.Debito, valor, descricao);
+        return Registrar(TipoMovimentacao.Debito, valor, descricao, formaPagamento);
     }
 
-    private Movimentacao Registrar(TipoMovimentacao tipo, decimal valor, string? descricao)
+    private Movimentacao Registrar(
+        TipoMovimentacao tipo,
+        decimal valor,
+        string? descricao,
+        FormaPagamento? formaPagamento)
     {
-        var movimentacao = Movimentacao.Criar(Id, tipo, valor, Saldo, descricao);
+        var movimentacao = Movimentacao.Criar(Id, tipo, valor, Saldo, descricao, formaPagamento);
         _movimentacoes.Add(movimentacao);
 
         AtualizadaEm = movimentacao.OcorridaEm;

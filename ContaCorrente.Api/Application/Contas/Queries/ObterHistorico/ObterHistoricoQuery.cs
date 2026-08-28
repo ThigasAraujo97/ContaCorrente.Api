@@ -10,7 +10,8 @@ public sealed record ObterHistoricoQuery(
     int Tamanho = 20,
     DateTime? De = null,
     DateTime? Ate = null,
-    TipoMovimentacao? Tipo = null) : IQuery<PaginaResponse<MovimentacaoResponse>>
+    TipoMovimentacao? Tipo = null,
+    FormaPagamento? FormaPagamento = null) : IQuery<PaginaResponse<MovimentacaoResponse>>
 {
     public const int TamanhoMaximoDePagina = 100;
 

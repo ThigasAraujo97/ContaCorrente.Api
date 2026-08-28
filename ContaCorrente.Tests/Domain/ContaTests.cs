@@ -135,6 +135,48 @@ public class ContaTests
             "a coleção interna não pode ser manipulada de fora do agregado");
     }
 
+    [Fact]
+    public void Creditar_ComFormaPagamento_RegistraNaMovimentacao()
+    {
+        var conta = NovaConta();
+
+        var movimentacao = conta.Creditar(500m, "Venda", FormaPagamento.Pix);
+
+        movimentacao.FormaPagamento.Should().Be(FormaPagamento.Pix);
+    }
+
+    [Fact]
+    public void Debitar_ComFormaPagamento_RegistraNaMovimentacao()
+    {
+        var conta = ContaComSaldo(500m);
+
+        var movimentacao = conta.Debitar(200m, "Fornecedor", FormaPagamento.Boleto);
+
+        movimentacao.FormaPagamento.Should().Be(FormaPagamento.Boleto);
+    }
+
+    [Fact]
+    public void Movimentar_SemInformarFormaPagamento_DeixaNulo()
+    {
+        var conta = NovaConta();
+
+        // Nulo e diferente de um valor padrao: significa "nao informado", que e o caso
+        // dos lancamentos anteriores a existencia do campo.
+        conta.Creditar(100m).FormaPagamento.Should().BeNull();
+    }
+
+    [Fact]
+    public void FormaPagamento_NaoInterfereNaRegraDeSaldo()
+    {
+        var conta = ContaComSaldo(100m);
+
+        var acao = () => conta.Debitar(500m, "Tentativa", FormaPagamento.Pix);
+
+        acao.Should().Throw<SaldoInsuficienteException>(
+            "a forma de pagamento e apenas um atributo do lancamento, nao afeta a regra");
+        conta.Saldo.Should().Be(100m);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

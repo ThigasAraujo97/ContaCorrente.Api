@@ -22,5 +22,11 @@ public sealed class MovimentarCommandValidator : AbstractValidator<MovimentarCom
 
         RuleFor(c => c.Descricao)
             .MaximumLength(200).WithMessage("Descrição deve ter no máximo 200 caracteres.");
+
+        // Opcional, mas se vier tem de ser um valor conhecido do enum. Sem esta regra,
+        // um número fora da faixa entraria silenciosamente no banco.
+        RuleFor(c => c.FormaPagamento)
+            .IsInEnum().WithMessage("Forma de pagamento inválida.")
+            .When(c => c.FormaPagamento.HasValue);
     }
 }

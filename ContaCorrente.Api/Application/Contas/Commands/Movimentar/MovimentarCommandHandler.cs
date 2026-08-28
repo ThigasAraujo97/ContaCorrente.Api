@@ -22,8 +22,10 @@ public sealed class MovimentarCommandHandler(ContaCorrenteDbContext db)
         // Debitar lança SaldoInsuficienteException e a transação inteira é revertida.
         var movimentacao = command.Tipo switch
         {
-            TipoMovimentacao.Credito => conta.Creditar(command.Valor, command.Descricao),
-            TipoMovimentacao.Debito => conta.Debitar(command.Valor, command.Descricao),
+            TipoMovimentacao.Credito => conta.Creditar(
+                command.Valor, command.Descricao, command.FormaPagamento),
+            TipoMovimentacao.Debito => conta.Debitar(
+                command.Valor, command.Descricao, command.FormaPagamento),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(command),
                 command.Tipo,

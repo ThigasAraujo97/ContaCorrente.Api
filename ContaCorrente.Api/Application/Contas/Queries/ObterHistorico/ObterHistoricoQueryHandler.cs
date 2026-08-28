@@ -43,6 +43,11 @@ public sealed class ObterHistoricoQueryHandler(ContaCorrenteDbContext db)
             consulta = consulta.Where(m => m.Tipo == tipo);
         }
 
+        if (filtro.FormaPagamento is { } forma)
+        {
+            consulta = consulta.Where(m => m.FormaPagamento == forma);
+        }
+
         var total = await consulta.CountAsync(cancellationToken);
 
         var itens = await consulta
@@ -57,6 +62,7 @@ public sealed class ObterHistoricoQueryHandler(ContaCorrenteDbContext db)
                 m.Valor,
                 m.SaldoResultante,
                 m.Descricao,
+                m.FormaPagamento,
                 m.OcorridaEm))
             .ToListAsync(cancellationToken);
 

@@ -48,7 +48,7 @@ dotnet test
 cd ContaCorrente.Web && npm test
 ```
 
-**47 testes no back-end** e **24 no front-end.**
+**60 testes no back-end** e **33 no front-end.**
 
 ## Endpoints
 
@@ -58,11 +58,37 @@ cd ContaCorrente.Web && npm test
 | `GET` | `/api/contas` | Lista contas |
 | `GET` | `/api/contas/{id}/saldo` | **Consulta o saldo disponível** |
 | `POST` | `/api/contas/{id}/movimentacoes` | **Registra entrada ou saída** |
-| `GET` | `/api/contas/{id}/movimentacoes` | **Consulta o histórico** (paginado, filtros de período e tipo) |
+| `GET` | `/api/contas/{id}/movimentacoes` | **Consulta o histórico** (paginado, filtros de período, tipo e forma de pagamento) |
 | `GET` | `/health` | Verificação de saúde |
 
 Entrada e saída compartilham a mesma rota, distinguidas por `tipo` no corpo — elas dividem
 validação, transação e formato de resposta; o que muda é só qual método do domínio é chamado.
+
+### Forma de pagamento
+
+Cada movimentação pode registrar **como** o dinheiro entrou ou saiu:
+
+| Valor | Significado |
+| --- | --- |
+| `Pix` | PIX |
+| `Boleto` | Boleto |
+| `CartaoCredito` | Cartão de crédito |
+| `CartaoDebito` | Cartão de débito |
+| `TransferenciaBancaria` | Transferência bancária |
+| `Dinheiro` | Dinheiro |
+
+O campo é **opcional**: lançamentos antigos não têm essa informação, e o extrato é registro
+histórico — não se reescreve o passado. Um valor fora da lista é recusado com `400`.
+
+Repare que `CartaoCredito`/`CartaoDebito` **não** têm relação com `tipo: Credito`/`Debito`:
+lá o sentido é contábil (entrada ou saída), aqui é o instrumento de pagamento. Os nomes são
+longos justamente para que as duas dimensões não se confundam.
+
+Os filtros do histórico são combináveis:
+
+```
+GET /api/contas/{id}/movimentacoes?tipo=Debito&formaPagamento=Pix&pagina=1&tamanho=10
+```
 
 ### Fluxo completo com `curl`
 
@@ -74,9 +100,9 @@ ID=$(curl -s -X POST $BASE -H "Content-Type: application/json" \
   -d '{"nome":"Act Digital LTDA","documento":"12345678000199"}' \
   | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
-# Entrada de 1000
+# Entrada de 1000 via PIX
 curl -s -X POST $BASE/$ID/movimentacoes -H "Content-Type: application/json" \
-  -d '{"tipo":"Credito","valor":1000,"descricao":"Aporte inicial"}'
+  -d '{"tipo":"Credito","valor":1000,"descricao":"Aporte inicial","formaPagamento":"Pix"}'
 
 # Saldo -> 1000
 curl -s $BASE/$ID/saldo
@@ -91,6 +117,9 @@ curl -s -X POST $BASE/$ID/movimentacoes -H "Content-Type: application/json" \
 
 # Histórico, do mais recente para o mais antigo
 curl -s "$BASE/$ID/movimentacoes?pagina=1&tamanho=10"
+
+# Só as saídas feitas por PIX
+curl -s "$BASE/$ID/movimentacoes?tipo=Debito&formaPagamento=Pix"
 ```
 
 A recusa devolve `ProblemDetails` (RFC 7807):
@@ -114,7 +143,7 @@ ContaCorrente.Api/          API .NET 9
 ├── Infrastructure/         EF Core, migrations, conversores
 └── Api/                    controllers, requests e tradução de exceções
 
-ContaCorrente.Tests/        47 testes: domínio, handlers, HTTP, concorrência
+ContaCorrente.Tests/        60 testes: domínio, handlers, HTTP, concorrência
 ContaCorrente.Web/          interface React (README próprio)
 docs/DECISOES.md            registro das decisões técnicas
 ```

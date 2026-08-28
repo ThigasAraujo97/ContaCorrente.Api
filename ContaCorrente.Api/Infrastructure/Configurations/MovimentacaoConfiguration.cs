@@ -36,9 +36,16 @@ public sealed class MovimentacaoConfiguration : IEntityTypeConfiguration<Movimen
 
         builder.Property(m => m.Descricao).HasMaxLength(200);
 
+        // Nullable: lançamentos anteriores à introdução do campo não têm forma de
+        // pagamento, e o extrato é histórico — não se reescreve o passado.
+        builder.Property(m => m.FormaPagamento).HasConversion<int?>();
+
         builder.Property(m => m.OcorridaEm).IsRequired();
 
         // Cobre a consulta de histórico: filtro por conta + ordenação/período por data.
         builder.HasIndex(m => new { m.ContaId, m.OcorridaEm });
+
+        // Cobre o filtro por forma de pagamento dentro de uma conta.
+        builder.HasIndex(m => new { m.ContaId, m.FormaPagamento });
     }
 }
