@@ -70,16 +70,7 @@ Os filtros do histórico são combináveis:
 GET /api/contas/{id}/movimentacoes?tipo=Debito&formaPagamento=Pix&pagina=1&tamanho=10
 ```
 
-### Fluxo completo com `curl`
-
-# Cria a conta e guarda o id
-ID=$(curl -s -X POST $BASE -H "Content-Type: application/json" \
-  -d '{"nome":"Act Digital LTDA","documento":"12345678000199"}' \
-  | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
-
-# Entrada de 1000 via PIX
-curl -s -X POST $BASE/$ID/movimentacoes -H "Content-Type: application/json" \
-  -d '{"tipo":"Credito","valor":1000,"descricao":"Aporte inicial","formaPagamento":"Pix"}'
+### Fluxo completo
 
 # Saldo -> 1000
 curl -s $BASE/$ID/saldo
