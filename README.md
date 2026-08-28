@@ -18,18 +18,10 @@ interface em React que a consome.
 
 ### 1. API
 
-```bash
-dotnet run --project ContaCorrente.Api
-```
-
 Sobe em <http://localhost:5232>. As migrations são aplicadas no startup — não há passo
 manual de banco. Documentação interativa em <http://localhost:5232/swagger>.
 
 ### 2. Interface
-
-```bash
-cd ContaCorrente.Web && npm install && npm run dev
-```
 
 Sobe em <http://localhost:5173> já apontando para a API. O front chama `/api/...` na
 própria origem e o proxy do Vite encaminha para a API — **em desenvolvimento não há CORS**.
@@ -37,18 +29,6 @@ própria origem e o proxy do Vite encaminha para a API — **em desenvolvimento 
 Para ver a tela sem subir o backend, troque `VITE_USE_MOCK=true` em
 `ContaCorrente.Web/.env.development`: um repositório em memória reproduz as mesmas regras,
 inclusive a recusa de saldo insuficiente.
-
-### Testes
-
-```bash
-dotnet test
-```
-
-```bash
-cd ContaCorrente.Web && npm test
-```
-
-**60 testes no back-end** e **33 no front-end.**
 
 ## Endpoints
 
@@ -91,9 +71,6 @@ GET /api/contas/{id}/movimentacoes?tipo=Debito&formaPagamento=Pix&pagina=1&taman
 ```
 
 ### Fluxo completo com `curl`
-
-```bash
-BASE=http://localhost:5232/api/contas
 
 # Cria a conta e guarda o id
 ID=$(curl -s -X POST $BASE -H "Content-Type: application/json" \
