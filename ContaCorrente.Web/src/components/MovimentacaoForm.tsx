@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import type { NovaMovimentacao, TipoMovimentacao } from '../types';
+import {
+  FORMAS_PAGAMENTO,
+  type FormaPagamento,
+  type NovaMovimentacao,
+  type TipoMovimentacao,
+} from '../types';
 import { formatarMoeda, paraNumero } from '../utils/format';
+import { rotuloFormaPagamento } from '../utils/rotulos';
 import { Card } from './Card';
 import { IconeMovimentacao } from './Icons';
 
@@ -18,6 +24,7 @@ export function MovimentacaoForm({ enviando, onRegistrar }: MovimentacaoFormProp
   const [tipo, setTipo] = useState<TipoMovimentacao>('Entrada');
   const [valor, setValor] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | ''>('');
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
@@ -46,10 +53,14 @@ export function MovimentacaoForm({ enviando, onRegistrar }: MovimentacaoFormProp
       await onRegistrar(tipo, {
         valor: Number(valorNumerico.toFixed(2)),
         descricao: descricao.trim(),
+        // Campo opcional: string vazia vira undefined para nao enviar o
+        // parametro, ja que a API distingue "nao informado" de um valor.
+        formaPagamento: formaPagamento || undefined,
       });
 
       setValor('');
       setDescricao('');
+      setFormaPagamento('');
       setSucesso(rotuloTipo(tipo) + ' registrada com sucesso.');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível registrar a movimentação.');
@@ -116,6 +127,23 @@ export function MovimentacaoForm({ enviando, onRegistrar }: MovimentacaoFormProp
           <span className="campo__auxiliar">
             {descricao.length}/{DESCRICAO_MAXIMA}
           </span>
+        </label>
+
+        <label className="campo">
+          <span className="campo__rotulo">Forma de pagamento</span>
+          <select
+            className="campo__entrada"
+            name="formaPagamento"
+            value={formaPagamento}
+            onChange={(e) => setFormaPagamento(e.target.value as FormaPagamento | '')}
+          >
+            <option value="">Nao informar</option>
+            {FORMAS_PAGAMENTO.map((forma) => (
+              <option key={forma} value={forma}>
+                {rotuloFormaPagamento(forma)}
+              </option>
+            ))}
+          </select>
         </label>
 
         <button className="botao" type="submit" disabled={enviando}>

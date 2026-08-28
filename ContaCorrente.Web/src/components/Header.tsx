@@ -1,4 +1,8 @@
-const NAVEGACAO = ['Movimentações', 'Saldo', 'Histórico'];
+const NAVEGACAO = [
+  { texto: 'Movimentações', href: '#nova-movimentacao' },
+  { texto: 'Saldo', href: '#saldo' },
+  { texto: 'Histórico', href: '#historico' },
+];
 
 export function Header() {
   return (
@@ -14,16 +18,13 @@ export function Header() {
 
         <nav className="menu" aria-label="Navegação principal">
           {NAVEGACAO.map((item) => (
-            <a key={item} className="menu__item" href="#topo">
-              {item}
+            <a key={item.texto} className="menu__item" href={item.href}>
+              {item.texto}
             </a>
           ))}
           <a className="menu__contato" href="#nova-movimentacao">
             Nova movimentação
           </a>
-          <span className="menu__idioma">
-            <span aria-hidden="true">🌐</span> Português
-          </span>
         </nav>
       </div>
     </header>

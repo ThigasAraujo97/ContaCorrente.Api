@@ -36,6 +36,10 @@ body,
   height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--fundo-pagina);
@@ -44,6 +48,10 @@ body {
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+[id] {
+  scroll-margin-top: 90px;
 }
 
 h1,
@@ -64,7 +72,11 @@ figure {
 }
 
 .cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   background: var(--azul-marca);
+  box-shadow: 0 8px 24px rgba(4, 9, 24, 0.18);
 }
 
 .cabecalho__conteudo {
@@ -429,18 +441,24 @@ figure {
 
 .campo__entrada {
   padding: 12px 14px;
-  border: 1px solid var(--linha);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(14, 33, 72, 0.95);
   color: var(--texto);
   font-family: inherit;
   font-size: 16px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color-scheme: dark;
+}
+
+.campo__entrada option {
+  background: #0d1f3a;
+  color: var(--texto);
 }
 
 .campo__entrada::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .campo__entrada:focus {
@@ -562,6 +580,39 @@ figure {
   color: var(--vermelho);
 }
 
+/* Neutra de proposito: a forma de pagamento e um atributo do lancamento, nao
+   deve competir visualmente com a distincao entrada/saida. */
+.etiqueta--pagamento {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--texto-suave);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------- filtros do historico */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filtros__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.filtros__limpar {
+  margin-left: auto;
+}
+
 .estado-vazio {
   padding: 26px 0;
   color: var(--texto-tenue);
@@ -668,5 +719,14 @@ figure {
   .paginacao {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtros__limpar {
+    margin-left: 0;
   }
 }

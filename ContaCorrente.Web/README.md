@@ -63,8 +63,8 @@ negativo. Útil para ver a interface sem subir o .NET. Os dados somem ao recarre
 | `GET` | `/api/contas` | — |
 | `POST` | `/api/contas` | `{ "nome": "...", "documento": "..." }` |
 | `GET` | `/api/contas/{id}/saldo` | — |
-| `GET` | `/api/contas/{id}/movimentacoes?pagina=1&tamanho=10` | — |
-| `POST` | `/api/contas/{id}/movimentacoes` | `{ "tipo": "Credito", "valor": 100.00, "descricao": "Venda" }` |
+| `GET` | `/api/contas/{id}/movimentacoes?pagina=1&tamanho=10&tipo=Debito&formaPagamento=Pix` | — |
+| `POST` | `/api/contas/{id}/movimentacoes` | `{ "tipo": "Credito", "valor": 100.00, "descricao": "Venda", "formaPagamento": "Pix" }` |
 
 ### Tradução de vocabulário
 
@@ -73,6 +73,21 @@ e o que o usuário entende. A conversão — junto com `ocorridaEm → dataHora`
 `saldoResultante → saldoApos` — acontece num **único lugar**: [`src/api/httpApi.ts`](src/api/httpApi.ts).
 Nenhum componente conhece o formato do backend, então mudanças de contrato ficam contidas
 nesse arquivo.
+
+A **forma de pagamento** é a exceção: os valores trafegados (`Pix`, `CartaoCredito`, …) são
+os mesmos da API, porque não há ambiguidade a resolver. O que existe é uma tabela de rótulos
+de exibição em [`src/utils/rotulos.ts`](src/utils/rotulos.ts) — `CartaoCredito` vira
+"Cartão de crédito" na tela, mas continua `CartaoCredito` no fio.
+
+### Filtros do histórico
+
+Tipo e forma de pagamento são filtrados **no servidor**: cada mudança dispara uma consulta
+nova com os parâmetros na query string. Filtrar o array em memória só funcionaria sobre a
+página já carregada — com 10 itens por página, daria resultado errado.
+
+Trocar de filtro sempre volta para a página 1. Registrar uma movimentação **preserva** os
+filtros ativos: se o novo lançamento não corresponder a eles, ele não aparece na tabela, e a
+confirmação de sucesso é o que sinaliza que deu certo.
 
 ### Erros
 
@@ -95,9 +110,10 @@ src/
 │   ├── httpApi.ts       implementação HTTP do contrato
 │   ├── mockApi.ts       implementação em memória (modo demonstração)
 │   └── index.ts         escolhe a implementação por variável de ambiente
-├── components/          Header, Card, SeletorConta e os blocos da tela
+├── components/          Header, Card, SeletorConta, FiltrosHistorico e os blocos da tela
 ├── hooks/useConta.ts    estado da conta (saldo, histórico, paginação, envio, erro)
 ├── utils/format.ts      moeda, data e parsing do valor digitado
+├── utils/rotulos.ts     rotulos de exibicao (CartaoCredito -> "Cartao de credito")
 ├── types.ts             contrato compartilhado (ContaCorrenteApi)
 ├── styles/global.css    paleta e componentes visuais
 └── App.tsx              composição da página
@@ -126,20 +142,23 @@ src/
 npm test
 ```
 
-24 testes cobrindo:
+33 testes cobrindo:
 
 - `format.test.ts` — formatação de moeda/data e parsing do valor digitado.
-- `httpApi.test.ts` — tradução Entrada↔Credito e Saída↔Debito, conversão da movimentação
+- `httpApi.test.ts` — tradução Entrada↔Credito e Saída↔Debito, envio da forma de pagamento,
+  montagem da query string dos filtros (e a omissão dos ausentes), conversão da movimentação
   e da página de histórico, e a transformação de 422/400/rede em `ApiError` exibível.
 - `MovimentacaoForm.test.tsx` — bloqueio de valor zero e descrição vazia, envio de
-  entrada e saída com o payload correto, exibição do erro devolvido pela API.
+  entrada e saída com o payload correto, envio (e omissão) da forma de pagamento, exibição
+  do erro devolvido pela API.
 - `App.test.tsx` — saldo/histórico da conta selecionada, seleção automática da primeira
-  conta, recarga **conjunta** de saldo e extrato após registrar, alerta de API fora do ar
-  e o convite a criar conta quando não há nenhuma.
+  conta, recarga **conjunta** de saldo e extrato após registrar, filtro por forma de
+  pagamento consultando a API, garantia de que o extrato é buscado **uma única vez** ao
+  abrir a conta, alerta de API fora do ar e o convite a criar conta quando não há nenhuma.
 
 ## Melhorias futuras
 
-- Filtros de período e tipo no histórico (a API já os aceita via query string).
+- Filtro de período no histórico (a API já o aceita via query string).
 - Totais de toda a conta, hoje calculados apenas sobre a página exibida — o caminho seria
   um endpoint de resumo na API.
 - Atualização otimista com reconciliação, em vez de recarregar tudo após cada registro.

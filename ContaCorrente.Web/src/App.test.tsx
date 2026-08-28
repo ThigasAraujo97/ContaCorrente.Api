@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -19,6 +19,7 @@ const movimentacao: Movimentacao = {
   descricao: 'Aporte inicial',
   dataHora: '2026-08-27T12:00:00.000Z',
   saldoApos: 2500,
+  formaPagamento: 'Pix',
 };
 
 /** Dublê da API: mantém a tela isolada de rede e do backend real. */
@@ -76,6 +77,46 @@ describe('App', () => {
     // Os dois têm de ser recarregados; um sem o outro deixaria a tela inconsistente.
     await waitFor(() => expect(cliente.listarMovimentacoes).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(cliente.obterSaldo).toHaveBeenCalledTimes(2));
+  });
+
+  it('exibe a forma de pagamento no extrato', async () => {
+    render(<App cliente={criarApiFalsa()} />);
+
+    // Busca dentro da tabela: "PIX" tambem aparece como opcao do filtro.
+    const linha = await screen.findByRole('row', { name: /Aporte inicial/ });
+    expect(within(linha).getByText('PIX')).toBeInTheDocument();
+  });
+
+  it('busca o extrato uma unica vez ao abrir a conta', async () => {
+    const cliente = criarApiFalsa();
+
+    render(<App cliente={cliente} />);
+
+    await waitFor(() => expect(cliente.listarMovimentacoes).toHaveBeenCalled());
+    // Guarda contra o efeito de reset de filtro disparar uma segunda consulta.
+    expect(cliente.listarMovimentacoes).toHaveBeenCalledTimes(1);
+  });
+
+  it('consulta a API ao filtrar por forma de pagamento, e volta para a página 1', async () => {
+    const cliente = criarApiFalsa();
+    const usuario = userEvent.setup();
+
+    render(<App cliente={cliente} />);
+    await waitFor(() => expect(cliente.listarMovimentacoes).toHaveBeenCalledTimes(1));
+
+    await usuario.selectOptions(
+      screen.getByLabelText('Forma de pagamento', { selector: 'select[name="filtroFormaPagamento"]' }),
+      'Boleto',
+    );
+
+    // O filtro e aplicado no servidor: filtrar em memoria erraria assim que o
+    // extrato passasse de uma pagina.
+    await waitFor(() =>
+      expect(cliente.listarMovimentacoes).toHaveBeenLastCalledWith(
+        'conta-1',
+        expect.objectContaining({ formaPagamento: 'Boleto', pagina: 1 }),
+      ),
+    );
   });
 
   it('mostra alerta quando a API está indisponível', async () => {

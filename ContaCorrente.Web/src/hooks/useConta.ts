@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../api';
 import type {
   ContaCorrenteApi,
+  FiltroHistorico,
   Movimentacao,
   NovaMovimentacao,
   PaginaMovimentacoes,
@@ -13,6 +14,8 @@ interface EstadoConta {
   atualizadoEm?: string;
   movimentacoes: Movimentacao[];
   pagina: PaginaMovimentacoes | null;
+  filtro: FiltroHistorico;
+  aplicarFiltro: (filtro: FiltroHistorico) => void;
   irParaPagina: (pagina: number) => void;
   carregando: boolean;
   enviando: boolean;
@@ -36,6 +39,10 @@ function mensagem(erro: unknown): string {
  * Centraliza o estado da conta: saldo e historico vem da API (fonte da verdade)
  * e sao recarregados juntos apos cada movimentacao, garantindo que a tela nunca
  * exiba um saldo derivado localmente nem um extrato dessincronizado do saldo.
+ *
+ * A filtragem tambem e responsabilidade da API, nao do cliente: filtrar em
+ * memoria so funcionaria sobre a pagina ja carregada, dando resultados errados
+ * assim que o extrato passasse de uma pagina.
  */
 export function useConta(
   api: ContaCorrenteApi,
@@ -44,13 +51,13 @@ export function useConta(
   const [saldo, setSaldo] = useState(0);
   const [atualizadoEm, setAtualizadoEm] = useState<string | undefined>();
   const [pagina, setPagina] = useState<PaginaMovimentacoes | null>(null);
-  const [numeroDaPagina, setNumeroDaPagina] = useState(1);
+  const [filtro, setFiltro] = useState<FiltroHistorico>({ pagina: 1 });
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(
-    async (paginaDesejada: number) => {
+    async (filtroDesejado: FiltroHistorico) => {
       if (!contaId) {
         setSaldo(0);
         setAtualizadoEm(undefined);
@@ -63,7 +70,7 @@ export function useConta(
       try {
         const [resultadoSaldo, historico] = await Promise.all([
           api.obterSaldo(contaId),
-          api.listarMovimentacoes(contaId, paginaDesejada),
+          api.listarMovimentacoes(contaId, filtroDesejado),
         ]);
 
         setSaldo(resultadoSaldo.saldo);
@@ -79,19 +86,32 @@ export function useConta(
     [api, contaId],
   );
 
-  // Trocar de conta sempre volta para a primeira pagina do extrato.
+  // Trocar de conta zera os filtros: eles pertencem ao extrato exibido.
+  // Devolver o proprio objeto quando ja esta no padrao evita uma segunda
+  // consulta desnecessaria — trocar a referencia dispararia o efeito de carga
+  // de novo, e o extrato seria buscado duas vezes por troca de conta.
   useEffect(() => {
-    setNumeroDaPagina(1);
+    setFiltro((atual) =>
+      atual.pagina === 1 && !atual.tipo && !atual.formaPagamento
+        ? atual
+        : { pagina: 1 },
+    );
   }, [contaId]);
 
   useEffect(() => {
-    void carregar(numeroDaPagina);
-  }, [carregar, numeroDaPagina]);
+    void carregar(filtro);
+  }, [carregar, filtro]);
 
-  const recarregar = useCallback(
-    () => carregar(numeroDaPagina),
-    [carregar, numeroDaPagina],
-  );
+  const recarregar = useCallback(() => carregar(filtro), [carregar, filtro]);
+
+  /** Trocar de filtro sempre volta para a primeira pagina. */
+  const aplicarFiltro = useCallback((novo: FiltroHistorico) => {
+    setFiltro({ ...novo, pagina: 1 });
+  }, []);
+
+  const irParaPagina = useCallback((numero: number) => {
+    setFiltro((atual) => ({ ...atual, pagina: numero }));
+  }, []);
 
   const registrar = useCallback(
     async (tipo: TipoMovimentacao, dados: NovaMovimentacao) => {
@@ -105,11 +125,12 @@ export function useConta(
             : await api.registrarSaida(contaId, dados);
 
         // Um lancamento novo entra no topo do extrato: volta para a pagina 1
-        // para que ele fique visivel.
-        if (numeroDaPagina !== 1) {
-          setNumeroDaPagina(1);
+        // para que ele fique visivel, preservando os filtros ativos.
+        const primeiraPagina = { ...filtro, pagina: 1 };
+        if (filtro.pagina !== 1) {
+          setFiltro(primeiraPagina);
         } else {
-          await carregar(1);
+          await carregar(primeiraPagina);
         }
 
         return movimentacao;
@@ -117,7 +138,7 @@ export function useConta(
         setEnviando(false);
       }
     },
-    [api, contaId, carregar, numeroDaPagina],
+    [api, contaId, carregar, filtro],
   );
 
   const movimentacoes = useMemo(() => pagina?.itens ?? [], [pagina]);
@@ -142,7 +163,9 @@ export function useConta(
     atualizadoEm,
     movimentacoes,
     pagina,
-    irParaPagina: setNumeroDaPagina,
+    filtro,
+    aplicarFiltro,
+    irParaPagina,
     carregando,
     enviando,
     erro,

@@ -5,6 +5,28 @@
  */
 export type TipoMovimentacao = 'Entrada' | 'Saida';
 
+/**
+ * Meio de pagamento. Diferente de TipoMovimentacao, os valores sao os mesmos da
+ * API — nao ha ambiguidade a resolver, so rotulos amigaveis na exibicao
+ * (ver utils/rotulos.ts).
+ */
+export type FormaPagamento =
+  | 'Boleto'
+  | 'CartaoCredito'
+  | 'CartaoDebito'
+  | 'Pix'
+  | 'TransferenciaBancaria'
+  | 'Dinheiro';
+
+export const FORMAS_PAGAMENTO: readonly FormaPagamento[] = [
+  'Pix',
+  'Boleto',
+  'CartaoCredito',
+  'CartaoDebito',
+  'TransferenciaBancaria',
+  'Dinheiro',
+] as const;
+
 export interface Conta {
   id: string;
   nome: string;
@@ -21,6 +43,8 @@ export interface Movimentacao {
   dataHora: string;
   /** Saldo da conta logo apos a movimentacao, para auditoria do extrato. */
   saldoApos?: number;
+  /** Nulo em lancamentos anteriores a existencia do campo. */
+  formaPagamento?: FormaPagamento | null;
 }
 
 export interface Saldo {
@@ -31,11 +55,19 @@ export interface Saldo {
 export interface NovaMovimentacao {
   valor: number;
   descricao: string;
+  formaPagamento?: FormaPagamento;
 }
 
 export interface NovaConta {
   nome: string;
   documento: string;
+}
+
+/** Filtros aceitos pelo historico. Todos opcionais e combinaveis. */
+export interface FiltroHistorico {
+  pagina?: number;
+  tipo?: TipoMovimentacao;
+  formaPagamento?: FormaPagamento;
 }
 
 /** Envelope paginado do historico. O extrato cresce sem limite. */
@@ -55,7 +87,10 @@ export interface ContaCorrenteApi {
   listarContas(): Promise<Conta[]>;
   criarConta(dados: NovaConta): Promise<Conta>;
   obterSaldo(contaId: string): Promise<Saldo>;
-  listarMovimentacoes(contaId: string, pagina?: number): Promise<PaginaMovimentacoes>;
+  listarMovimentacoes(
+    contaId: string,
+    filtro?: FiltroHistorico,
+  ): Promise<PaginaMovimentacoes>;
   registrarEntrada(contaId: string, dados: NovaMovimentacao): Promise<Movimentacao>;
   registrarSaida(contaId: string, dados: NovaMovimentacao): Promise<Movimentacao>;
 }

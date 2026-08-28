@@ -21,6 +21,7 @@ function movimentacaoDaApi(tipo: 'Credito' | 'Debito') {
     valor: 150.5,
     saldoResultante: 849.5,
     descricao: 'Pagamento',
+    formaPagamento: 'Pix' as const,
     ocorridaEm: '2026-08-27T12:00:00.0000000Z',
   };
 }
@@ -70,6 +71,7 @@ describe('httpApi', () => {
       descricao: 'Pagamento',
       dataHora: '2026-08-27T12:00:00.0000000Z',
       saldoApos: 849.5,
+      formaPagamento: 'Pix',
     });
   });
 
@@ -85,11 +87,69 @@ describe('httpApi', () => {
       }),
     );
 
-    const pagina = await httpApi.listarMovimentacoes('conta-1', 2);
+    const pagina = await httpApi.listarMovimentacoes('conta-1', { pagina: 2 });
 
     expect(pagina.itens[0].tipo).toBe('Entrada');
     expect(pagina.totalDeItens).toBe(15);
     expect(pagina.temProximaPagina).toBe(false);
+  });
+
+  it('envia a forma de pagamento no corpo da movimentação', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(resposta(movimentacaoDaApi('Debito'), 201));
+
+    await httpApi.registrarSaida('conta-1', {
+      valor: 10,
+      descricao: 'Conta de luz',
+      formaPagamento: 'Boleto',
+    });
+
+    const enviado = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(enviado.formaPagamento).toBe('Boleto');
+  });
+
+  it('monta a query string com os filtros de tipo e forma de pagamento', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(resposta({ itens: [], pagina: 1, totalDeItens: 0, totalDePaginas: 0, temProximaPagina: false }));
+
+    await httpApi.listarMovimentacoes('conta-1', {
+      pagina: 2,
+      tipo: 'Saida',
+      formaPagamento: 'CartaoCredito',
+    });
+
+    const url = fetchSpy.mock.calls[0][0] as string;
+    expect(url).toContain('pagina=2');
+    expect(url).toContain('tipo=Debito');
+    expect(url).toContain('formaPagamento=CartaoCredito');
+  });
+
+  it('omite filtros ausentes da query string', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(resposta({ itens: [], pagina: 1, totalDeItens: 0, totalDePaginas: 0, temProximaPagina: false }));
+
+    await httpApi.listarMovimentacoes('conta-1');
+
+    // Parametro vazio nao e o mesmo que parametro ausente para a API.
+    const url = fetchSpy.mock.calls[0][0] as string;
+    expect(url).not.toContain('tipo=');
+    expect(url).not.toContain('formaPagamento=');
+  });
+
+  it('trata forma de pagamento nula da API como ausente', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      resposta({ ...movimentacaoDaApi('Credito'), formaPagamento: null }, 201),
+    );
+
+    const movimentacao = await httpApi.registrarEntrada('conta-1', {
+      valor: 10,
+      descricao: 'Antiga',
+    });
+
+    expect(movimentacao.formaPagamento).toBeNull();
   });
 
   it('trata descrição nula da API como texto vazio', async () => {

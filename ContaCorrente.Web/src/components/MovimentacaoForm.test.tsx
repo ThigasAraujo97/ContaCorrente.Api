@@ -43,6 +43,7 @@ describe('MovimentacaoForm', () => {
     expect(onRegistrar).toHaveBeenCalledWith('Entrada', {
       valor: 1500.5,
       descricao: 'Venda',
+      formaPagamento: undefined,
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Entrada registrada');
   });
@@ -55,7 +56,37 @@ describe('MovimentacaoForm', () => {
     await usuario.type(screen.getByPlaceholderText('Pagamento de fornecedor'), 'Aluguel');
     await usuario.click(botaoRegistrar());
 
-    expect(onRegistrar).toHaveBeenCalledWith('Saida', { valor: 200, descricao: 'Aluguel' });
+    expect(onRegistrar).toHaveBeenCalledWith('Saida', {
+      valor: 200,
+      descricao: 'Aluguel',
+      formaPagamento: undefined,
+    });
+  });
+
+  it('envia a forma de pagamento escolhida', async () => {
+    const { onRegistrar, usuario } = montar();
+
+    await usuario.type(screen.getByPlaceholderText('0,00'), '80');
+    await usuario.type(screen.getByPlaceholderText('Pagamento de fornecedor'), 'Conta de luz');
+    await usuario.selectOptions(screen.getByLabelText('Forma de pagamento'), 'Boleto');
+    await usuario.click(botaoRegistrar());
+
+    expect(onRegistrar).toHaveBeenCalledWith('Entrada', {
+      valor: 80,
+      descricao: 'Conta de luz',
+      formaPagamento: 'Boleto',
+    });
+  });
+
+  it('omite a forma de pagamento quando nao informada', async () => {
+    const { onRegistrar, usuario } = montar();
+
+    await usuario.type(screen.getByPlaceholderText('0,00'), '80');
+    await usuario.type(screen.getByPlaceholderText('Pagamento de fornecedor'), 'Sem forma');
+    await usuario.click(botaoRegistrar());
+
+    // undefined, nao string vazia: a API distingue "nao informado" de um valor.
+    expect(onRegistrar.mock.calls[0][1].formaPagamento).toBeUndefined();
   });
 
   it('exibe a mensagem de erro devolvida pela API', async () => {

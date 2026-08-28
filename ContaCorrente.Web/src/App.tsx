@@ -47,6 +47,8 @@ export function App({ cliente = api }: AppProps) {
     atualizadoEm,
     movimentacoes,
     pagina,
+    filtro,
+    aplicarFiltro,
     irParaPagina,
     carregando,
     enviando,
@@ -105,7 +107,7 @@ export function App({ cliente = api }: AppProps) {
           </div>
         )}
 
-        <div className="grade">
+        <div className="grade" id="saldo">
           <SeletorConta
             contas={contas}
             contaSelecionada={contaId}
@@ -122,16 +124,20 @@ export function App({ cliente = api }: AppProps) {
 
         {contaId ? (
           <>
-            <div className="grade grade--formulario">
+            <div className="grade grade--formulario" id="nova-movimentacao">
               <MovimentacaoForm enviando={enviando} onRegistrar={handleRegistrar} />
             </div>
 
-            <HistoricoTable
-              movimentacoes={movimentacoes}
-              carregando={carregando}
-              pagina={pagina}
-              onTrocarPagina={irParaPagina}
-            />
+            <div id="historico">
+              <HistoricoTable
+                movimentacoes={movimentacoes}
+                carregando={carregando}
+                pagina={pagina}
+                onTrocarPagina={irParaPagina}
+                filtro={filtro}
+                onAplicarFiltro={aplicarFiltro}
+              />
+            </div>
           </>
         ) : (
           <p className="aviso" role="status">

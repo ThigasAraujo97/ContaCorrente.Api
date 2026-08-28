@@ -1,6 +1,8 @@
 import type {
   Conta,
   ContaCorrenteApi,
+  FiltroHistorico,
+  FormaPagamento,
   Movimentacao,
   NovaConta,
   NovaMovimentacao,
@@ -22,6 +24,7 @@ interface MovimentacaoDaApi {
   valor: number;
   saldoResultante: number;
   descricao: string | null;
+  formaPagamento: FormaPagamento | null;
   ocorridaEm: string;
 }
 
@@ -59,18 +62,35 @@ function converterMovimentacao(m: MovimentacaoDaApi): Movimentacao {
     descricao: m.descricao ?? '',
     dataHora: m.ocorridaEm,
     saldoApos: m.saldoResultante,
+    formaPagamento: m.formaPagamento,
   };
 }
 
 function movimentar(
   contaId: string,
   tipo: TipoMovimentacao,
-  { valor, descricao }: NovaMovimentacao,
+  { valor, descricao, formaPagamento }: NovaMovimentacao,
 ): Promise<Movimentacao> {
   return request<MovimentacaoDaApi>(`/api/contas/${contaId}/movimentacoes`, {
     method: 'POST',
-    body: JSON.stringify({ tipo: paraApi(tipo), valor, descricao }),
+    body: JSON.stringify({ tipo: paraApi(tipo), valor, descricao, formaPagamento }),
   }).then(converterMovimentacao);
+}
+
+/**
+ * Monta a query string do historico. Filtro ausente nao vira parametro vazio:
+ * a API distingue "sem filtro" de "filtro com valor em branco".
+ */
+function montarConsulta(filtro: FiltroHistorico): string {
+  const parametros = new URLSearchParams({
+    pagina: String(filtro.pagina ?? 1),
+    tamanho: String(TAMANHO_DA_PAGINA),
+  });
+
+  if (filtro.tipo) parametros.set('tipo', paraApi(filtro.tipo));
+  if (filtro.formaPagamento) parametros.set('formaPagamento', filtro.formaPagamento);
+
+  return parametros.toString();
 }
 
 export const httpApi: ContaCorrenteApi = {
@@ -87,9 +107,9 @@ export const httpApi: ContaCorrenteApi = {
       (s): Saldo => ({ saldo: s.saldo, atualizadoEm: s.atualizadoEm }),
     ),
 
-  listarMovimentacoes: (contaId: string, pagina = 1) =>
+  listarMovimentacoes: (contaId: string, filtro: FiltroHistorico = {}) =>
     request<PaginaDaApi>(
-      `/api/contas/${contaId}/movimentacoes?pagina=${pagina}&tamanho=${TAMANHO_DA_PAGINA}`,
+      `/api/contas/${contaId}/movimentacoes?${montarConsulta(filtro)}`,
     ).then(
       (p): PaginaMovimentacoes => ({
         itens: p.itens.map(converterMovimentacao),

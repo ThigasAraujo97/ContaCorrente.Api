@@ -1,6 +1,7 @@
 import type {
   Conta,
   ContaCorrenteApi,
+  FiltroHistorico,
   Movimentacao,
   NovaConta,
   NovaMovimentacao,
@@ -12,7 +13,8 @@ import { ApiError } from './client';
 /**
  * Repositorio em memoria usado apenas para demonstrar a tela sem o backend
  * (VITE_USE_MOCK=true). Reproduz as mesmas regras da API, inclusive o bloqueio
- * de saldo negativo, para que a UI possa ser validada de ponta a ponta.
+ * de saldo negativo e os filtros do historico, para que a UI possa ser validada
+ * de ponta a ponta.
  */
 const TAMANHO_DA_PAGINA = 10;
 
@@ -44,7 +46,7 @@ function buscar(contaId: string): ContaEmMemoria {
 function registrar(
   contaId: string,
   tipo: Movimentacao['tipo'],
-  { valor, descricao }: NovaMovimentacao,
+  { valor, descricao, formaPagamento }: NovaMovimentacao,
 ): Movimentacao {
   const conta = buscar(contaId);
 
@@ -68,6 +70,7 @@ function registrar(
     descricao: descricao.trim(),
     dataHora: new Date().toISOString(),
     saldoApos: conta.saldo,
+    formaPagamento: formaPagamento ?? null,
   };
 
   conta.movimentacoes.unshift(movimentacao);
@@ -102,17 +105,27 @@ export const mockApi: ContaCorrenteApi = {
     return { saldo: buscar(contaId).saldo, atualizadoEm: new Date().toISOString() };
   },
 
-  async listarMovimentacoes(contaId: string, pagina = 1): Promise<PaginaMovimentacoes> {
+  async listarMovimentacoes(
+    contaId: string,
+    filtro: FiltroHistorico = {},
+  ): Promise<PaginaMovimentacoes> {
     await atraso();
 
-    const todas = buscar(contaId).movimentacoes;
+    const pagina = filtro.pagina ?? 1;
+
+    const filtradas = buscar(contaId).movimentacoes.filter((m) => {
+      if (filtro.tipo && m.tipo !== filtro.tipo) return false;
+      if (filtro.formaPagamento && m.formaPagamento !== filtro.formaPagamento) return false;
+      return true;
+    });
+
     const inicio = (pagina - 1) * TAMANHO_DA_PAGINA;
-    const totalDePaginas = Math.ceil(todas.length / TAMANHO_DA_PAGINA);
+    const totalDePaginas = Math.ceil(filtradas.length / TAMANHO_DA_PAGINA);
 
     return {
-      itens: todas.slice(inicio, inicio + TAMANHO_DA_PAGINA),
+      itens: filtradas.slice(inicio, inicio + TAMANHO_DA_PAGINA),
       pagina,
-      totalDeItens: todas.length,
+      totalDeItens: filtradas.length,
       totalDePaginas,
       temProximaPagina: pagina < totalDePaginas,
     };

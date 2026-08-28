@@ -1,6 +1,8 @@
-import type { Movimentacao, PaginaMovimentacoes } from '../types';
+import type { FiltroHistorico, Movimentacao, PaginaMovimentacoes } from '../types';
 import { formatarDataHora, formatarMoeda } from '../utils/format';
+import { rotuloFormaPagamento } from '../utils/rotulos';
 import { Card } from './Card';
+import { FiltrosHistorico } from './FiltrosHistorico';
 import { IconeHistorico } from './Icons';
 
 interface HistoricoTableProps {
@@ -8,6 +10,8 @@ interface HistoricoTableProps {
   carregando: boolean;
   pagina?: PaginaMovimentacoes | null;
   onTrocarPagina?: (pagina: number) => void;
+  filtro?: FiltroHistorico;
+  onAplicarFiltro?: (filtro: FiltroHistorico) => void;
 }
 
 export function HistoricoTable({
@@ -15,9 +19,12 @@ export function HistoricoTable({
   carregando,
   pagina = null,
   onTrocarPagina,
+  filtro,
+  onAplicarFiltro,
 }: HistoricoTableProps) {
   const vazio = !carregando && movimentacoes.length === 0;
   const paginado = pagina !== null && pagina.totalDePaginas > 1 && onTrocarPagina;
+  const filtrando = Boolean(filtro?.tipo || filtro?.formaPagamento);
 
   return (
     <Card
@@ -26,10 +33,18 @@ export function HistoricoTable({
       acento="roxo"
       className="card--largo"
     >
+      {filtro && onAplicarFiltro && (
+        <FiltrosHistorico filtro={filtro} onAplicar={onAplicarFiltro} />
+      )}
+
       {carregando && <p className="estado-vazio">Carregando movimentações...</p>}
 
       {vazio && (
-        <p className="estado-vazio">Nenhuma movimentação registrada até o momento.</p>
+        <p className="estado-vazio">
+          {filtrando
+            ? 'Nenhuma movimentação corresponde aos filtros selecionados.'
+            : 'Nenhuma movimentação registrada até o momento.'}
+        </p>
       )}
 
       {!carregando && movimentacoes.length > 0 && (
@@ -40,6 +55,7 @@ export function HistoricoTable({
                 <th scope="col">Data</th>
                 <th scope="col">Descrição</th>
                 <th scope="col">Tipo</th>
+                <th scope="col">Pagamento</th>
                 <th scope="col" className="alinhado-direita">
                   Valor
                 </th>
@@ -51,6 +67,7 @@ export function HistoricoTable({
             <tbody>
               {movimentacoes.map((m) => {
                 const entrada = m.tipo === 'Entrada';
+                const forma = rotuloFormaPagamento(m.formaPagamento);
 
                 return (
                   <tr key={m.id}>
@@ -60,6 +77,13 @@ export function HistoricoTable({
                       <span className={'etiqueta etiqueta--' + m.tipo.toLowerCase()}>
                         {entrada ? 'Entrada' : 'Saída'}
                       </span>
+                    </td>
+                    <td>
+                      {forma ? (
+                        <span className="etiqueta etiqueta--pagamento">{forma}</span>
+                      ) : (
+                        <span className="estado-vazio">—</span>
+                      )}
                     </td>
                     <td
                       className={
