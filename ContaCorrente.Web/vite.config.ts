@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       // Evita CORS em desenvolvimento: /api e' encaminhado para a API .NET.
       proxy: {
         '/api': {
-          target: env.VITE_API_PROXY || 'http://localhost:5232',
+          target: env.VITE_API_PROXY || 'http://localhost:5000',
           changeOrigin: true,
           secure: false,
         },
